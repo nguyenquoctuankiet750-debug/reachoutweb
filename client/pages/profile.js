@@ -6,66 +6,58 @@ import UserProfile from "../components/Profiles/UserProfile";
 import AdminProfile from "../components/Profiles/AdminProfile";
 
 function Profile() {
-  const [item, setItem] = useState(null);
   const { user } = Auth.useUser();
+  const [accessLevel, setAccessLevel] = useState(null);
   const [profileData, setProfileData] = useState(null);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    setItem(localStorage.getItem("accessLevel"));
+    const level = localStorage.getItem("accessLevel");
+    setAccessLevel(level);
 
-    // lấy dữ liệu từ bảng profile
     const fetchProfile = async () => {
       if (user) {
         const { data, error } = await supabase
           .from("profile")
           .select("*")
-          .eq("id", user.id) // so sánh theo uuid user
+          .eq("id", user.id)
           .single();
 
-        if (error) {
+        if (error && error.code !== "PGRST116") {
           console.error("Error fetching profile:", error.message);
         } else {
-          setProfileData(data);
-          console.log("Profile from DB:", data);
+          setProfileData(data || null); // nếu chưa có row thì data = null
         }
       }
+      setLoading(false);
     };
 
     fetchProfile();
   }, [user]);
 
-  if (!item || !profileData) {
-    return <h1>Loading...</h1>;
-  } else if (item === "user" && localStorage.getItem("supabase.auth.token")) {
-    return (
-      <div>
-        <UserProfile user={user} profile={profileData} />
-      </div>
-    );
-  } else if (
-    item === "company" &&
-    localStorage.getItem("supabase.auth.token")
-  ) {
-    return (
-      <div>
-        <CompanyProfile user={user} profile={profileData} />
-      </div>
-    );
-  } else {
-    return (
-      <div>
-        <AdminProfile user={user} profile={profileData} />
-      </div>
-    );
+  if (!user) {
+    return <h1 className="text-center mt-10">Vui lòng đăng nhập trước</h1>;
   }
+
+  if (loading) {
+    return <h1 className="text-center mt-10">Đang tải dữ liệu...</h1>;
+  }
+
+  if (accessLevel === "user") {
+    return <UserProfile user={user} profile={profileData} />;
+  }
+
+  if (accessLevel === "company") {
+    return <CompanyProfile user={user} profile={profileData} />;
+  }
+
+  return <AdminProfile user={user} profile={profileData} />;
 }
 
-export default function logi() {
+export default function ProfileWrapper() {
   return (
     <Auth.UserContextProvider supabaseClient={supabase}>
-      <Profile supabaseClient={supabase}>
-        <Auth supabaseClient={supabase} />
-      </Profile>
+      <Profile />
     </Auth.UserContextProvider>
   );
 }

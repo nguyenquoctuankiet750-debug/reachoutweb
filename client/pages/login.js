@@ -1,6 +1,5 @@
-import Router from "next/router";
-import { Auth, Typography, Button } from "@supabase/ui";
 import { useRouter } from "next/router";
+import { Auth } from "@supabase/ui";
 import { supabase } from "../utils/supabaseClient";
 import { useState, useEffect } from "react";
 
@@ -11,20 +10,20 @@ const Home = (props) => {
 
   useEffect(() => {
     const createProfileIfNotExists = async () => {
-      if (user) {
-        // kiểm tra xem profile đã tồn tại chưa
-        const { data: existing, error: checkError } = await supabase
+      if (user && type) {
+        // Kiểm tra xem profile đã tồn tại chưa
+        const { data: existing } = await supabase
           .from("profile")
           .select("*")
           .eq("id", user.id)
           .single();
 
         if (!existing) {
-          // nếu chưa có thì insert
+          // Nếu chưa có thì insert
           const { error } = await supabase.from("profile").insert([
             {
-              id: user.id, // uuid từ Supabase Auth
-              first_name: user.email.split("@")[0], // tạm lấy phần trước @
+              id: user.id,
+              first_name: user.email.split("@")[0],
               last_name: user.email,
               age: null,
               place: null,
@@ -36,25 +35,19 @@ const Home = (props) => {
           ]);
 
           if (error) {
-            console.error("Error inserting profile:", error.message);
+            console.error("❌ Error inserting profile:", error.message);
           } else {
             console.log("✅ Profile created for new user");
           }
         }
 
-        // redirect sang /profile
-        router.push(
-          {
-            pathname: "/profile",
-            query: { type },
-          },
-          "profile"
-        );
+        // Redirect sang /profile
+        router.push("/profile");
       }
     };
 
     createProfileIfNotExists();
-  }, [user, type]);
+  }, [user, type]); // chạy lại khi user login hoặc chọn type
 
   return (
     <section className="lg:p-20 flex-col items-center my-10 lg:my-0">
@@ -63,6 +56,7 @@ const Home = (props) => {
           Login As
         </h1>
 
+        {/* Chọn User */}
         <div className="flex items-center pl-4 rounded border border-gray-200 dark:border-gray-700">
           <input
             id="bordered-radio-1"
@@ -81,6 +75,8 @@ const Home = (props) => {
             User
           </label>
         </div>
+
+        {/* Chọn Company */}
         <div className="flex items-center pl-4 rounded border border-gray-200 dark:border-gray-700">
           <input
             id="bordered-radio-2"
@@ -99,14 +95,22 @@ const Home = (props) => {
             Company
           </label>
         </div>
+
+        {/* Thông báo nếu chưa chọn role */}
+        {user && !type && (
+          <p className="text-red-500 text-center mt-4">
+            👉 Vui lòng chọn "User" hoặc "Company" để tiếp tục
+          </p>
+        )}
       </div>
 
+      {/* Form login mặc định của Supabase UI */}
       <article>{props.children}</article>
     </section>
   );
 };
 
-export default function logi() {
+export default function LoginPage() {
   return (
     <Auth.UserContextProvider supabaseClient={supabase}>
       <Home supabaseClient={supabase}>
