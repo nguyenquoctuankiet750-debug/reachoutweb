@@ -6,14 +6,13 @@ import UserProfile from "../components/Profiles/UserProfile";
 import AdminProfile from "../components/Profiles/AdminProfile";
 
 function Profile() {
+  const [item, setItem] = useState(null);
   const { user } = Auth.useUser();
-  const [accessLevel, setAccessLevel] = useState(null);
   const [profileData, setProfileData] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const level = localStorage.getItem("accessLevel");
-    setAccessLevel(level);
+    setItem(localStorage.getItem("accessLevel"));
 
     const fetchProfile = async () => {
       if (user) {
@@ -23,41 +22,48 @@ function Profile() {
           .eq("id", user.id)
           .single();
 
-        if (error && error.code !== "PGRST116") {
-          console.error("Error fetching profile:", error.message);
+        if (error) {
+          console.error("❌ Error fetching profile:", error.message);
         } else {
-          setProfileData(data || null); // nếu chưa có row thì data = null
+          setProfileData(data);
+          console.log("Profile from DB:", data);
         }
+        setLoading(false);
       }
-      setLoading(false);
     };
 
     fetchProfile();
   }, [user]);
 
-  if (!user) {
-    return <h1 className="text-center mt-10">Vui lòng đăng nhập trước</h1>;
-  }
+  if (loading) return <h1>Loading...</h1>;
 
-  if (loading) {
-    return <h1 className="text-center mt-10">Đang tải dữ liệu...</h1>;
+  if (item === "user") {
+    return (
+      <div>
+        <UserProfile user={user} profile={profileData} />
+      </div>
+    );
+  } else if (item === "company") {
+    return (
+      <div>
+        <CompanyProfile user={user} profile={profileData} />
+      </div>
+    );
+  } else {
+    return (
+      <div>
+        <AdminProfile user={user} profile={profileData} />
+      </div>
+    );
   }
-
-  if (accessLevel === "user") {
-    return <UserProfile user={user} profile={profileData} />;
-  }
-
-  if (accessLevel === "company") {
-    return <CompanyProfile user={user} profile={profileData} />;
-  }
-
-  return <AdminProfile user={user} profile={profileData} />;
 }
 
-export default function ProfileWrapper() {
+export default function logi() {
   return (
     <Auth.UserContextProvider supabaseClient={supabase}>
-      <Profile />
+      <Profile supabaseClient={supabase}>
+        <Auth supabaseClient={supabase} />
+      </Profile>
     </Auth.UserContextProvider>
   );
 }

@@ -1,5 +1,6 @@
-import { useRouter } from "next/router";
+import Router from "next/router";
 import { Auth } from "@supabase/ui";
+import { useRouter } from "next/router";
 import { supabase } from "../utils/supabaseClient";
 import { useState, useEffect } from "react";
 
@@ -10,8 +11,8 @@ const Home = (props) => {
 
   useEffect(() => {
     const createProfileIfNotExists = async () => {
-      if (user && type) {
-        // Kiểm tra xem profile đã tồn tại chưa
+      if (user) {
+        // kiểm tra xem profile đã tồn tại chưa
         const { data: existing } = await supabase
           .from("profile")
           .select("*")
@@ -19,7 +20,7 @@ const Home = (props) => {
           .single();
 
         if (!existing) {
-          // Nếu chưa có thì insert
+          // nếu chưa có thì insert
           const { error } = await supabase.from("profile").insert([
             {
               id: user.id,
@@ -41,13 +42,13 @@ const Home = (props) => {
           }
         }
 
-        // Redirect sang /profile
+        // redirect sang /profile
         router.push("/profile");
       }
     };
 
     createProfileIfNotExists();
-  }, [user, type]); // chạy lại khi user login hoặc chọn type
+  }, [user, type]);
 
   return (
     <section className="lg:p-20 flex-col items-center my-10 lg:my-0">
@@ -56,7 +57,6 @@ const Home = (props) => {
           Login As
         </h1>
 
-        {/* Chọn User */}
         <div className="flex items-center pl-4 rounded border border-gray-200 dark:border-gray-700">
           <input
             id="bordered-radio-1"
@@ -75,8 +75,6 @@ const Home = (props) => {
             User
           </label>
         </div>
-
-        {/* Chọn Company */}
         <div className="flex items-center pl-4 rounded border border-gray-200 dark:border-gray-700">
           <input
             id="bordered-radio-2"
@@ -95,22 +93,14 @@ const Home = (props) => {
             Company
           </label>
         </div>
-
-        {/* Thông báo nếu chưa chọn role */}
-        {user && !type && (
-          <p className="text-red-500 text-center mt-4">
-            👉 Vui lòng chọn "User" hoặc "Company" để tiếp tục
-          </p>
-        )}
       </div>
 
-      {/* Form login mặc định của Supabase UI */}
       <article>{props.children}</article>
     </section>
   );
 };
 
-export default function LoginPage() {
+export default function logi() {
   return (
     <Auth.UserContextProvider supabaseClient={supabase}>
       <Home supabaseClient={supabase}>
