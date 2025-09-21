@@ -9,41 +9,43 @@ function Profile() {
   const [item, setItem] = useState(null);
   const { user } = Auth.useUser();
   const [profileData, setProfileData] = useState(null);
-  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     setItem(localStorage.getItem("accessLevel"));
 
+    // lấy dữ liệu từ bảng profile
     const fetchProfile = async () => {
       if (user) {
         const { data, error } = await supabase
           .from("profile")
           .select("*")
-          .eq("id", user.id)
+          .eq("id", user.id) // so sánh theo uuid user
           .single();
 
         if (error) {
-          console.error("❌ Error fetching profile:", error.message);
+          console.error("Error fetching profile:", error.message);
         } else {
           setProfileData(data);
           console.log("Profile from DB:", data);
         }
-        setLoading(false);
       }
     };
 
     fetchProfile();
   }, [user]);
 
-  if (loading) return <h1>Loading...</h1>;
-
-  if (item === "user") {
+  if (!item || !profileData) {
+    return <h1>Loading...</h1>;
+  } else if (item === "user" && localStorage.getItem("supabase.auth.token")) {
     return (
       <div>
         <UserProfile user={user} profile={profileData} />
       </div>
     );
-  } else if (item === "company") {
+  } else if (
+    item === "company" &&
+    localStorage.getItem("supabase.auth.token")
+  ) {
     return (
       <div>
         <CompanyProfile user={user} profile={profileData} />
