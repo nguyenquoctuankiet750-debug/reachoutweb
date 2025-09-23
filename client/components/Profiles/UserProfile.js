@@ -97,75 +97,75 @@ export default function UserProfile({ user }) {
       <div className="grid grid-cols-2 gap-4">
         <input
           type="text"
-          placeholder="Họ"
+          placeholder="Nhập họ (ví dụ: Nguyễn)"
           value={lastName}
           disabled={!edit}
           onChange={(e) => setLastName(e.target.value)}
-          className="border p-2"
+          className="border p-2 rounded"
         />
         <input
           type="text"
-          placeholder="Tên"
+          placeholder="Nhập tên (ví dụ: An)"
           value={firstName}
           disabled={!edit}
           onChange={(e) => setFirstName(e.target.value)}
-          className="border p-2"
+          className="border p-2 rounded"
         />
         <input
           type="text"
-          placeholder="Số điện thoại"
+          placeholder="Nhập số điện thoại"
           value={phone}
           disabled={!edit}
           onChange={(e) => setPhone(e.target.value)}
-          className="border p-2"
+          className="border p-2 rounded"
         />
         <input
           type="text"
-          placeholder="CCCD"
+          placeholder="Nhập CCCD (12 số)"
           value={cccd}
           disabled={!edit}
           onChange={(e) => setCCCD(e.target.value)}
-          className="border p-2"
+          className="border p-2 rounded"
         />
         <input
           type="number"
-          placeholder="Tuổi"
+          placeholder="Nhập tuổi"
           value={age}
           disabled={!edit}
           onChange={(e) => setAge(e.target.value)}
-          className="border p-2"
+          className="border p-2 rounded"
         />
         <input
           type="text"
-          placeholder="Nơi ở"
+          placeholder="Nhập nơi ở (ví dụ: Đà Nẵng)"
           value={location}
           disabled={!edit}
           onChange={(e) => setLocation(e.target.value)}
-          className="border p-2"
+          className="border p-2 rounded"
         />
         <input
           type="text"
-          placeholder="Loại khuyết tật"
+          placeholder="Loại khuyết tật (nếu có)"
           value={disabilityType}
           disabled={!edit}
           onChange={(e) => setDisabilityType(e.target.value)}
-          className="border p-2"
+          className="border p-2 rounded"
         />
         <input
           type="text"
-          placeholder="Mức độ khuyết tật"
+          placeholder="Mức độ khuyết tật (ví dụ: Nhẹ / Vừa / Nặng)"
           value={severity}
           disabled={!edit}
           onChange={(e) => setSeverity(e.target.value)}
-          className="border p-2"
+          className="border p-2 rounded"
         />
         <input
           type="text"
-          placeholder="Bằng cấp"
+          placeholder="Nhập bằng cấp (ví dụ: Đại học, Cao đẳng)"
           value={qualifications}
           disabled={!edit}
           onChange={(e) => setQualifications(e.target.value)}
-          className="border p-2 col-span-2"
+          className="border p-2 rounded col-span-2"
         />
       </div>
 
