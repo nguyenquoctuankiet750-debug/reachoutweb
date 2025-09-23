@@ -1,191 +1,263 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../../utils/supabaseClient";
+import { useState, useEffect } from 'react';
+import { Auth } from '@supabase/ui';
+import { supabase } from '../../utils/supabaseClient';
+import { useSpeechSynthesis, useSpeechRecognition } from 'react-speech-kit';
+import { useDropzone } from 'react-dropzone';
 
-export default function UserProfile({ user }) {
-  const [loading, setLoading] = useState(true);
+function UserProfile({ user }) {
   const [edit, setEdit] = useState(false);
   const [newUser, setNewUser] = useState(false);
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+  const [phone, setPhone] = useState('');
+  const [disabilityType, setDisabilityType] = useState('');
+  const [severity, setSeverity] = useState('');
+  const [age, setAge] = useState('');
+  const [cccd, setCCCD] = useState('');
+  const [disability, setDisability] = useState('');
+  const [location, setLocation] = useState('');
+  const [qualifications, setQualifications] = useState('');
+  const [publicURL, setPublicURL] = useState(null);
+  const [resumeURL, setResumeURL] = useState(null);
 
-  // Các state lưu dữ liệu profile
-  const [firstName, setFirstName] = useState("");
-  const [lastName, setLastName] = useState("");
-  const [phone, setPhone] = useState("");
-  const [disability, setDisability] = useState("");
-  const [severity, setSeverity] = useState("");
-  const [cccd, setCCCD] = useState("");
-  const [location, setLocation] = useState("");
-  const [disabilityType, setDisabilityType] = useState("");
-  const [qualifications, setQualifications] = useState("");
-  const [age, setAge] = useState("");
+  const { getRootProps, getInputProps, isDragActive, acceptedFiles } =
+    useDropzone({});
 
-  // Lấy profile từ Supabase
-  const fetchProfile = async () => {
-    if (!user) return;
+  const files = acceptedFiles.map((file) => (
+    <li key={file.path}>
+      {file.path} - {file.size} bytes
+    </li>
+  ));
 
-    const { data, error } = await supabase
-      .from("profile")
-      .select("*")
-      .eq("id", user.id)
-      .single();
+  const setupUser = async () => {
+    const query = JSON.stringify({
+      query: `query MyQuery {
+        profile(where: {id: {_eq: "${user.id}"}}) {
+          id
+          cccd
+          age
+          disability
+          disability_type
+          first_name
+          last_name
+          mobile
+          place
+          qualifications
+          severity
+        }
+      }`,
+    });
 
-    if (error || !data) {
-      console.log("⚠️ Chưa có profile, bật chế độ nhập mới");
+    const response = await fetch(
+      'https://reachout-sih.hasura.app/v1/graphql',
+      {
+        headers: {
+          'content-type': 'application/json',
+          'x-hasura-admin-secret': process.env.HASURA_ADMIN_SECRET,
+        },
+        method: 'POST',
+        body: query,
+      },
+    );
+
+    const responseJson = await response.json();
+    console.log(responseJson);
+
+    if (responseJson.data.profile.length !== 0) {
+      const u = responseJson.data.profile[0];
+      setFirstName(u.first_name);
+      setLastName(u.last_name);
+      setPhone(u.mobile);
+      setDisability(u.disability);
+      setSeverity(u.severity);
+      setCCCD(u.cccd);
+      setLocation(u.place);
+      setDisabilityType(u.disability_type);
+      setQualifications(u.qualifications);
+    } else {
       setNewUser(true);
       setEdit(true);
-    } else {
-      console.log("✅ Profile:", data);
-      setFirstName(data.first_name || "");
-      setLastName(data.last_name || "");
-      setPhone(data.mobile || "");
-      setDisability(data.disability || "");
-      setSeverity(data.severity || "");
-      setCCCD(data.cccd || "");
-      setLocation(data.place || "");
-      setDisabilityType(data.disability_type || "");
-      setQualifications(data.qualifications || "");
-      setAge(data.age || "");
     }
-
-    setLoading(false);
   };
 
   useEffect(() => {
-    fetchProfile();
-  }, [user]);
+    setupUser();
+  }, []);
 
-  // Lưu profile
-  const saveProfile = async () => {
-    const profileData = {
-      id: user.id,
-      first_name: firstName,
-      last_name: lastName,
-      mobile: phone,
-      disability,
-      severity,
-      cccd,
-      place: location,
-      disability_type: disabilityType,
-      qualifications,
-      age,
-    };
-
-    let error;
+  const submitForm = async () => {
+    let query;
     if (newUser) {
-      ({ error } = await supabase.from("profile").insert([profileData]));
+      query = JSON.stringify({
+        query: `mutation MyMutation {
+          insert_profile(objects: {
+            cccd: "${cccd}", 
+            age: "${age}", 
+            disability: "${disability}", 
+            disability_type: "${disabilityType}", 
+            first_name: "${firstName}", 
+            last_name: "${lastName}", 
+            mobile: "${phone}", 
+            place: "${location}", 
+            qualifications: "${qualifications}", 
+            severity: "${severity}", 
+            id: "${user.id}"
+          }) {
+            returning { id }
+          }
+        }`,
+      });
+      setNewUser(false);
     } else {
-      ({ error } = await supabase
-        .from("profile")
-        .update(profileData)
-        .eq("id", user.id));
+      query = JSON.stringify({
+        query: `mutation MyMutation {
+          update_profile(
+            where: {id: {_eq: "${user.id}"}}, 
+            _set: {
+              cccd: "${cccd}", 
+              age: "${age}", 
+              disability: "${disability}", 
+              disability_type: "${disabilityType}", 
+              first_name: "${firstName}", 
+              last_name: "${lastName}", 
+              mobile: "${phone}", 
+              place: "${location}", 
+              qualifications: "${qualifications}", 
+              severity: "${severity}"
+            }
+          ) {
+            returning { id }
+          }
+        }`,
+      });
     }
 
-    if (error) {
-      alert("❌ Lỗi khi lưu profile: " + error.message);
+    const response = await fetch(
+      'https://reachout-sih.hasura.app/v1/graphql',
+      {
+        headers: {
+          'content-type': 'application/json',
+          'x-hasura-admin-secret': process.env.HASURA_ADMIN_SECRET,
+        },
+        method: 'POST',
+        body: query,
+      },
+    );
+
+    const responseJson = await response.json();
+    console.log(responseJson);
+    if (responseJson.errors) {
+      alert("❌ Lỗi khi lưu profile: " + responseJson.errors[0].message);
     } else {
-      alert("✅ Lưu thành công!");
-      setEdit(false);
-      setNewUser(false);
+      alert("✅ Lưu profile thành công!");
     }
   };
 
-  if (loading) return <h2>Loading...</h2>;
+  function formResponse(e) {
+    e.preventDefault();
+    if (edit) {
+      setEdit(false);
+      submitForm();
+    } else {
+      setEdit(true);
+    }
+  }
 
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Thông tin cá nhân</h1>
+    <div>
+      <div className="mt-10 sm:mt-0 p-10">
+        <div className="md:grid md:grid-cols-3 md:gap-6">
+          <div className="md:col-span-1">
+            <div className="px-4 sm:px-0">
+              <h3 className="text-3xl font-medium leading-6 text-gray-900 dark:text-white">
+                Thông tin cá nhân
+              </h3>
+            </div>
+          </div>
 
-      <div className="grid grid-cols-2 gap-4">
-        <input
-          type="text"
-          placeholder="Nhập họ (ví dụ: Nguyễn)"
-          value={lastName}
-          disabled={!edit}
-          onChange={(e) => setLastName(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <input
-          type="text"
-          placeholder="Nhập tên (ví dụ: An)"
-          value={firstName}
-          disabled={!edit}
-          onChange={(e) => setFirstName(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <input
-          type="text"
-          placeholder="Nhập số điện thoại"
-          value={phone}
-          disabled={!edit}
-          onChange={(e) => setPhone(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <input
-          type="text"
-          placeholder="Nhập CCCD (12 số)"
-          value={cccd}
-          disabled={!edit}
-          onChange={(e) => setCCCD(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <input
-          type="number"
-          placeholder="Nhập tuổi"
-          value={age}
-          disabled={!edit}
-          onChange={(e) => setAge(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <input
-          type="text"
-          placeholder="Nhập nơi ở (ví dụ: Đà Nẵng)"
-          value={location}
-          disabled={!edit}
-          onChange={(e) => setLocation(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <input
-          type="text"
-          placeholder="Loại khuyết tật (nếu có)"
-          value={disabilityType}
-          disabled={!edit}
-          onChange={(e) => setDisabilityType(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <input
-          type="text"
-          placeholder="Mức độ khuyết tật (ví dụ: Nhẹ / Vừa / Nặng)"
-          value={severity}
-          disabled={!edit}
-          onChange={(e) => setSeverity(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <input
-          type="text"
-          placeholder="Nhập bằng cấp (ví dụ: Đại học, Cao đẳng)"
-          value={qualifications}
-          disabled={!edit}
-          onChange={(e) => setQualifications(e.target.value)}
-          className="border p-2 rounded col-span-2"
-        />
-      </div>
+          <div className="mt-5 md:mt-0 md:col-span-2 ">
+            <form className="shadow sm:rounded-md sm:overflow-hidden p-5 border-gray-300 dark:bg-zinc-800">
+              <div className="grid gap-6 mb-6 md:grid-cols-2">
+                <div>
+                  <label htmlFor="first_name" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+                    Họ
+                  </label>
+                  <input
+                    type="text"
+                    id="first_name"
+                    className="input"
+                    value={firstName}
+                    onChange={(e) => setFirstName(e.target.value)}
+                    disabled={!edit}
+                  />
+                </div>
+                <div>
+                  <label htmlFor="last_name" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+                    Tên
+                  </label>
+                  <input
+                    type="text"
+                    id="last_name"
+                    className="input"
+                    value={lastName}
+                    onChange={(e) => setLastName(e.target.value)}
+                    disabled={!edit}
+                  />
+                </div>
+              </div>
 
-      <div className="mt-4 flex gap-4">
-        {!edit ? (
-          <button
-            onClick={() => setEdit(true)}
-            className="px-4 py-2 bg-blue-500 text-white rounded"
-          >
-            Sửa
-          </button>
-        ) : (
-          <button
-            onClick={saveProfile}
-            className="px-4 py-2 bg-green-500 text-white rounded"
-          >
-            Lưu
-          </button>
-        )}
+              <div className="mb-6">
+                <label htmlFor="cccd" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+                  Số CCCD
+                </label>
+                <input
+                  type="text"
+                  id="cccd"
+                  className="input"
+                  value={cccd}
+                  onChange={(e) => setCCCD(e.target.value)}
+                  disabled={!edit}
+                />
+              </div>
+
+              <div className="mb-6">
+                <label htmlFor="severity" className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+                  Mức độ khuyết tật
+                </label>
+                <select
+                  id="severity"
+                  className="input"
+                  value={severity}
+                  onChange={(e) => setSeverity(e.target.value)}
+                  disabled={!edit}
+                >
+                  <option value="">Chọn mức độ</option>
+                  <option value="Nhẹ">Nhẹ</option>
+                  <option value="Trung bình">Trung bình</option>
+                  <option value="Nặng">Nặng</option>
+                </select>
+              </div>
+
+              <div className="px-4 py-3 bg-gray-50 text-right sm:px-6 dark:bg-zinc-800">
+                <button
+                  type="submit"
+                  className="btn-primary"
+                  onClick={(e) => formResponse(e)}
+                >
+                  {edit ? 'Lưu' : 'Chỉnh sửa'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       </div>
     </div>
+  );
+}
+
+export default function logi({ user }) {
+  return (
+    <Auth.UserContextProvider supabaseClient={supabase}>
+      <UserProfile supabaseClient={supabase} user={user} />
+    </Auth.UserContextProvider>
   );
 }
