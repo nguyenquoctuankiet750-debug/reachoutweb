@@ -1,4 +1,3 @@
-import Router from "next/router";
 import { Auth } from "@supabase/ui";
 import { useRouter } from "next/router";
 import { supabase } from "../utils/supabaseClient";
@@ -11,38 +10,54 @@ const Home = (props) => {
 
   useEffect(() => {
     const createProfileIfNotExists = async () => {
-      if (user) {
-        // kiểm tra xem profile đã tồn tại chưa
-        const { data: existing } = await supabase
-          .from("profile")
-          .select("*")
-          .eq("id", user.id)
-          .single();
+      if (user && type) {
+        if (type === "user") {
+          // kiểm tra user profile
+          const { data: existing } = await supabase
+            .from("profile")
+            .select("*")
+            .eq("id", user.id)
+            .single();
 
-        if (!existing) {
-          // nếu chưa có thì insert
-          const { error } = await supabase.from("profile").insert([
-            {
-              id: user.id,
-              first_name: user.email.split("@")[0],
-              last_name: user.email,
-              age: null,
-              place: null,
-              disability_type: null,
-              disability: null,
-              severity: null,
-              qualifications: null,
-            },
-          ]);
+          if (!existing) {
+            const { error } = await supabase.from("profile").insert([
+              {
+                id: user.id,
+                first_name: user.email.split("@")[0], // lấy phần trước @
+                last_name: user.email,
+              },
+            ]);
+            if (error) {
+              console.error("❌ Error creating user profile:", error.message);
+            } else {
+              console.log("✅ Created user profile");
+            }
+          }
+        } else if (type === "company") {
+          // kiểm tra company profile
+          const { data: existing } = await supabase
+            .from("company")
+            .select("*")
+            .eq("id", user.id)
+            .single();
 
-          if (error) {
-            console.error("❌ Error inserting profile:", error.message);
-          } else {
-            console.log("✅ Profile created for new user");
+          if (!existing) {
+            const { error } = await supabase.from("company").insert([
+              {
+                id: user.id,
+                name: user.email.split("@")[0] + " Company",
+                head: user.email,
+              },
+            ]);
+            if (error) {
+              console.error("❌ Error creating company profile:", error.message);
+            } else {
+              console.log("✅ Created company profile");
+            }
           }
         }
 
-        // redirect sang /profile
+        // chuyển hướng sang /profile
         router.push("/profile");
       }
     };
@@ -57,50 +72,54 @@ const Home = (props) => {
           Login As
         </h1>
 
-        <div className="flex items-center pl-4 rounded border border-gray-200 dark:border-gray-700">
+        {/* Chọn User */}
+        <div className="flex items-center pl-4 rounded border border-gray-200 dark:border-gray-700 mb-2">
           <input
-            id="bordered-radio-1"
+            id="radio-user"
             type="radio"
-            name="bordered-radio"
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600"
+            name="login-type"
+            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600"
             onChange={() => {
               localStorage.setItem("accessLevel", "user");
               setType("user");
             }}
           />
           <label
-            htmlFor="bordered-radio-1"
-            className="py-4 ml-2 w-full text-sm font-medium text-gray-900 dark:text-gray-300"
+            htmlFor="radio-user"
+            className="py-2 ml-2 text-sm font-medium text-gray-900 dark:text-gray-300"
           >
             User
           </label>
         </div>
+
+        {/* Chọn Company */}
         <div className="flex items-center pl-4 rounded border border-gray-200 dark:border-gray-700">
           <input
-            id="bordered-radio-2"
+            id="radio-company"
             type="radio"
-            name="bordered-radio"
-            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600 dark:bg-gray-700 dark:border-gray-600"
+            name="login-type"
+            className="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 focus:ring-blue-500 dark:focus:ring-blue-600"
             onChange={() => {
               localStorage.setItem("accessLevel", "company");
               setType("company");
             }}
           />
           <label
-            htmlFor="bordered-radio-2"
-            className="py-4 ml-2 w-full text-sm font-medium text-gray-900 dark:text-gray-300"
+            htmlFor="radio-company"
+            className="py-2 ml-2 text-sm font-medium text-gray-900 dark:text-gray-300"
           >
             Company
           </label>
         </div>
       </div>
 
-      <article>{props.children}</article>
+      {/* Form Supabase Auth */}
+      <article className="mt-6">{props.children}</article>
     </section>
   );
 };
 
-export default function logi() {
+export default function LoginPage() {
   return (
     <Auth.UserContextProvider supabaseClient={supabase}>
       <Home supabaseClient={supabase}>

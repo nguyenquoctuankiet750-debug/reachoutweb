@@ -1,165 +1,149 @@
-import { useEffect, useState } from "react";
+import { useState, useEffect } from "react";
 import { supabase } from "../../utils/supabaseClient";
 
-export default function CompanyProfile({ user }) {
-  const [loading, setLoading] = useState(true);
+function CompanyProfile({ user, profile }) {
   const [edit, setEdit] = useState(false);
-  const [newCompany, setNewCompany] = useState(false);
 
-  // Các state lưu dữ liệu company profile
-  const [companyName, setCompanyName] = useState("");
-  const [email, setEmail] = useState("");
-  const [phone, setPhone] = useState("");
-  const [location, setLocation] = useState("");
-  const [industry, setIndustry] = useState("");
-  const [website, setWebsite] = useState("");
-  const [description, setDescription] = useState("");
-
-  // Lấy profile công ty từ Supabase
-  const fetchProfile = async () => {
-    if (!user) return;
-
-    const { data, error } = await supabase
-      .from("company")
-      .select("*")
-      .eq("id", user.id)
-      .single();
-
-    if (error || !data) {
-      console.log("⚠️ Chưa có profile công ty, bật chế độ nhập mới");
-      setNewCompany(true);
-      setEdit(true);
-    } else {
-      console.log("✅ Company profile:", data);
-      setCompanyName(data.company_name || "");
-      setEmail(data.email || "");
-      setPhone(data.phone || "");
-      setLocation(data.location || "");
-      setIndustry(data.industry || "");
-      setWebsite(data.website || "");
-      setDescription(data.description || "");
-    }
-
-    setLoading(false);
-  };
+  const [name, setName] = useState(profile?.name || "");
+  const [head, setHead] = useState(profile?.head || "");
+  const [mobile, setMobile] = useState(profile?.mobile || "");
+  const [website, setWebsite] = useState(profile?.website || "");
+  const [gstin, setGstin] = useState(profile?.gstin || "");
 
   useEffect(() => {
-    fetchProfile();
-  }, [user]);
-
-  // Lưu profile công ty
-  const saveProfile = async () => {
-    const companyData = {
-      id: user.id,
-      company_name: companyName,
-      email,
-      phone,
-      location,
-      industry,
-      website,
-      description,
-    };
-
-    let error;
-    if (newCompany) {
-      ({ error } = await supabase.from("company").insert([companyData]));
-    } else {
-      ({ error } = await supabase
-        .from("company")
-        .update(companyData)
-        .eq("id", user.id));
+    if (profile) {
+      setName(profile.name || "");
+      setHead(profile.head || "");
+      setMobile(profile.mobile || "");
+      setWebsite(profile.website || "");
+      setGstin(profile.gstin || "");
     }
+  }, [profile]);
 
-    if (error) {
-      alert("❌ Lỗi khi lưu company profile: " + error.message);
-    } else {
-      alert("✅ Lưu thành công!");
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    try {
+      const { data, error } = await supabase
+        .from("company")
+        .upsert([
+          {
+            id: user.id,
+            name,
+            head,
+            mobile,
+            website,
+            gstin,
+          },
+        ]);
+
+      if (error) throw error;
+      console.log("✅ Company profile saved:", data);
       setEdit(false);
-      setNewCompany(false);
+    } catch (err) {
+      console.error("❌ Lỗi khi lưu company:", err.message);
     }
   };
 
-  if (loading) return <h2>Loading...</h2>;
-
   return (
-    <div className="p-6">
-      <h1 className="text-2xl font-bold mb-4">Thông tin công ty</h1>
+    <div className="p-10">
+      <h1 className="text-3xl font-semibold mb-6">🏢 Company Profile</h1>
 
-      <div className="grid grid-cols-2 gap-4">
-        <input
-          type="text"
-          placeholder="Tên công ty (ví dụ: Công ty TNHH ABC)"
-          value={companyName}
-          disabled={!edit}
-          onChange={(e) => setCompanyName(e.target.value)}
-          className="border p-2 rounded col-span-2"
-        />
-        <input
-          type="email"
-          placeholder="Email công ty (ví dụ: contact@abc.com)"
-          value={email}
-          disabled={!edit}
-          onChange={(e) => setEmail(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <input
-          type="text"
-          placeholder="Số điện thoại (ví dụ: 0901234567)"
-          value={phone}
-          disabled={!edit}
-          onChange={(e) => setPhone(e.target.value)}
-          className="border p-2 rounded"
-        />
-        <input
-          type="text"
-          placeholder="Địa chỉ (ví dụ: Hà Nội, Việt Nam)"
-          value={location}
-          disabled={!edit}
-          onChange={(e) => setLocation(e.target.value)}
-          className="border p-2 rounded col-span-2"
-        />
-        <input
-          type="text"
-          placeholder="Ngành nghề (ví dụ: Công nghệ thông tin, Xây dựng)"
-          value={industry}
-          disabled={!edit}
-          onChange={(e) => setIndustry(e.target.value)}
-          className="border p-2 rounded col-span-2"
-        />
-        <input
-          type="text"
-          placeholder="Website công ty (ví dụ: https://abc.com)"
-          value={website}
-          disabled={!edit}
-          onChange={(e) => setWebsite(e.target.value)}
-          className="border p-2 rounded col-span-2"
-        />
-        <textarea
-          placeholder="Mô tả ngắn gọn về công ty, lĩnh vực hoạt động, sứ mệnh..."
-          value={description}
-          disabled={!edit}
-          onChange={(e) => setDescription(e.target.value)}
-          className="border p-2 rounded col-span-2 h-24"
-        />
-      </div>
+      <form
+        className="shadow sm:rounded-md sm:overflow-hidden p-5 border border-gray-300 dark:bg-zinc-800"
+        onSubmit={handleSubmit}
+      >
+        <div className="grid gap-6 mb-6 md:grid-cols-2">
+          <div>
+            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+              Company Name
+            </label>
+            <input
+              type="text"
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              disabled={!edit}
+              className="w-full p-2.5 border rounded-lg bg-gray-50 dark:bg-zinc-700"
+              required
+            />
+          </div>
 
-      <div className="mt-4 flex gap-4">
-        {!edit ? (
+          <div>
+            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+              Company Head
+            </label>
+            <input
+              type="text"
+              value={head}
+              onChange={(e) => setHead(e.target.value)}
+              disabled={!edit}
+              className="w-full p-2.5 border rounded-lg bg-gray-50 dark:bg-zinc-700"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+              Mobile
+            </label>
+            <input
+              type="tel"
+              value={mobile}
+              onChange={(e) => setMobile(e.target.value)}
+              disabled={!edit}
+              className="w-full p-2.5 border rounded-lg bg-gray-50 dark:bg-zinc-700"
+              required
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+              Website
+            </label>
+            <input
+              type="url"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              disabled={!edit}
+              className="w-full p-2.5 border rounded-lg bg-gray-50 dark:bg-zinc-700"
+            />
+          </div>
+
+          <div>
+            <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+              GSTIN
+            </label>
+            <input
+              type="text"
+              value={gstin}
+              onChange={(e) => setGstin(e.target.value)}
+              disabled={!edit}
+              className="w-full p-2.5 border rounded-lg bg-gray-50 dark:bg-zinc-700"
+            />
+          </div>
+        </div>
+
+        <div className="text-right">
           <button
-            onClick={() => setEdit(true)}
-            className="px-4 py-2 bg-blue-500 text-white rounded"
+            type="button"
+            onClick={() => setEdit(!edit)}
+            className="mr-4 px-4 py-2 bg-gray-400 text-white rounded-lg"
           >
-            Sửa
+            {edit ? "Cancel" : "Edit"}
           </button>
-        ) : (
-          <button
-            onClick={saveProfile}
-            className="px-4 py-2 bg-green-500 text-white rounded"
-          >
-            Lưu
-          </button>
-        )}
-      </div>
+
+          {edit && (
+            <button
+              type="submit"
+              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700"
+            >
+              Save
+            </button>
+          )}
+        </div>
+      </form>
     </div>
   );
 }
+
+export default CompanyProfile;
