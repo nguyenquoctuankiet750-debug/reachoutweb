@@ -1,4 +1,4 @@
-import { Auth } from "ui"; // nếu bạn dùng @supabase/ui thì thay "ui" thành "@supabase/ui"
+import { Auth } from "@supabase/ui"; // nếu bạn dùng @supabase/ui thì thay "ui" thành "@supabase/ui"
 import { useRouter } from "next/router";
 import { supabase } from "../utils/supabaseClient";
 import { useState, useEffect } from "react";
