@@ -6,74 +6,56 @@ import UserProfile from "../components/Profiles/UserProfile";
 import AdminProfile from "../components/Profiles/AdminProfile";
 
 function Profile() {
-  const { user } = Auth.useUser();
   const [item, setItem] = useState(null);
+  const { user } = Auth.useUser();
   const [profileData, setProfileData] = useState(null);
 
   useEffect(() => {
-    if (!user) return;
-
-    // lấy kiểu (user/company) từ localStorage
-    const accessLevel = localStorage.getItem("accessLevel");
-    setItem(accessLevel);
+    setItem(localStorage.getItem("accessLevel"));
 
     const fetchProfile = async () => {
-      try {
-        if (accessLevel === "user") {
-          const { data, error } = await supabase
-            .from("profile")
-            .select("*")
-            .eq("id", user.id)
-            .single();
+      if (!user) return;
 
-          if (error) throw error;
-          setProfileData(data);
-        } else if (accessLevel === "company") {
-          const { data, error } = await supabase
-            .from("company")
-            .select("*")
-            .eq("id", user.id)
-            .single();
+      if (item === "user") {
+        const { data, error } = await supabase
+          .from("profile")
+          .select("*")
+          .eq("id", user.id)
+          .single();
 
-          if (error) throw error;
-          setProfileData(data);
-        } else {
-          // mặc định admin
-          setProfileData({});
-        }
-      } catch (err) {
-        console.error("❌ Error fetching profile:", err.message);
+        if (!error) setProfileData(data);
+        else console.error("❌ Error fetching user profile:", error.message);
+      } else if (item === "company") {
+        const { data, error } = await supabase
+          .from("company")
+          .select("*")
+          .eq("id", user.id)
+          .single();
+
+        if (!error) setProfileData(data);
+        else console.error("❌ Error fetching company profile:", error.message);
       }
     };
 
     fetchProfile();
-  }, [user]);
+  }, [user, item]);
 
-  if (!user) return <h1>⚠️ Bạn chưa đăng nhập</h1>;
-  if (!item || !profileData) return <h1>Loading...</h1>;
-
-  if (item === "user") {
-    return (
-      <div>
-        <UserProfile user={user} profile={profileData} />
-      </div>
-    );
-  } else if (item === "company") {
-    return (
-      <div>
-        <CompanyProfile user={user} profile={profileData} />
-      </div>
-    );
-  } else {
-    return (
-      <div>
-        <AdminProfile user={user} profile={profileData} />
-      </div>
-    );
+  if (!item || !profileData) {
+    return <h1>Loading...</h1>;
   }
+
+  if (item === "user" && localStorage.getItem("supabase.auth.token")) {
+    return <UserProfile user={user} profile={profileData} />;
+  }
+
+  if (item === "company" && localStorage.getItem("supabase.auth.token")) {
+    return <CompanyProfile user={user} profile={profileData} />;
+  }
+
+  return <AdminProfile user={user} />;
 }
 
-export default function ProfilePage() {
+export default function logi() {
   return (
     <Auth.UserContextProvider supabaseClient={supabase}>
       <Profile supabaseClient={supabase}>

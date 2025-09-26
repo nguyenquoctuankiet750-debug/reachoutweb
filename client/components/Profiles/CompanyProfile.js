@@ -40,16 +40,14 @@ export default function CompanyProfile({ user }) {
     fetchCompany();
   }, [user]);
 
-  // Lưu thay đổi vào DB
+  // Lưu dữ liệu company
   const handleSave = async () => {
     setLoading(true);
 
-    const { error } = await supabase
-      .from("company")
-      .upsert({
-        id: user.id,
-        ...form,
-      });
+    const { error } = await supabase.from("company").upsert({
+      id: user.id,
+      ...form,
+    });
 
     if (error) {
       alert("❌ Lỗi khi lưu company: " + error.message);
@@ -84,7 +82,7 @@ export default function CompanyProfile({ user }) {
 
       <input
         type="text"
-        placeholder="Mobile Number"
+        placeholder="Mobile"
         value={form.mobile}
         onChange={(e) => setForm({ ...form, mobile: e.target.value })}
         className="w-full border p-2 rounded"
