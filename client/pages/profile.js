@@ -13,7 +13,7 @@ function Profile() {
   useEffect(() => {
     setItem(localStorage.getItem("accessLevel"));
 
-    const fetchProfile = async () => {
+    const fetchData = async () => {
       if (!user) return;
 
       if (item === "user") {
@@ -23,21 +23,29 @@ function Profile() {
           .eq("id", user.id)
           .single();
 
-        if (!error) setProfileData(data);
-        else console.error("❌ Error fetching user profile:", error.message);
-      } else if (item === "company") {
+        if (error) {
+          console.error("❌ Error fetching user profile:", error.message);
+        } else {
+          setProfileData(data);
+        }
+      }
+
+      if (item === "company") {
         const { data, error } = await supabase
           .from("company")
           .select("*")
           .eq("id", user.id)
           .single();
 
-        if (!error) setProfileData(data);
-        else console.error("❌ Error fetching company profile:", error.message);
+        if (error) {
+          console.error("❌ Error fetching company profile:", error.message);
+        } else {
+          setProfileData(data);
+        }
       }
     };
 
-    fetchProfile();
+    fetchData();
   }, [user, item]);
 
   if (!item || !profileData) {
@@ -45,14 +53,26 @@ function Profile() {
   }
 
   if (item === "user" && localStorage.getItem("supabase.auth.token")) {
-    return <UserProfile user={user} profile={profileData} />;
+    return (
+      <div>
+        <UserProfile user={user} profile={profileData} />
+      </div>
+    );
   }
 
   if (item === "company" && localStorage.getItem("supabase.auth.token")) {
-    return <CompanyProfile user={user} profile={profileData} />;
+    return (
+      <div>
+        <CompanyProfile user={user} profile={profileData} />
+      </div>
+    );
   }
 
-  return <AdminProfile user={user} />;
+  return (
+    <div>
+      <AdminProfile user={user} profile={profileData} />
+    </div>
+  );
 }
 
 export default function logi() {
