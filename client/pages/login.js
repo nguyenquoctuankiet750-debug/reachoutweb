@@ -1,4 +1,4 @@
-import { Auth } from "@supabase/ui"; // nếu bạn dùng @supabase/ui thì thay "ui" thành "@supabase/ui"
+import { Auth } from "@supabase/ui";
 import { useRouter } from "next/router";
 import { supabase } from "../utils/supabaseClient";
 import { useState, useEffect } from "react";
@@ -12,7 +12,7 @@ const Home = (props) => {
     const createRecordIfNotExists = async () => {
       if (!user || !type) return;
 
-      if (type === "user") {
+      try {
         const { data: existing } = await supabase
           .from("profile")
           .select("id")
@@ -31,38 +31,26 @@ const Home = (props) => {
               disability: null,
               severity: null,
               qualifications: null,
+              role: type, // 👈 gán role
             },
           ]);
-          if (error) console.error("❌ Error creating profile:", error.message);
-          else console.log("✅ New user profile created");
+
+          if (error) {
+            console.error("❌ Error creating profile:", error.message);
+          } else {
+            console.log("✅ New profile created with role:", type);
+          }
         }
-      }
 
-      if (type === "company") {
-        const { data: existing } = await supabase
-          .from("company")
-          .select("id")
-          .eq("id", user.id)
-          .single();
-
-        if (!existing) {
-          const { error } = await supabase.from("company").insert([
-            {
-              id: user.id,
-              name: user.email.split("@")[0],
-              head: user.email,
-              mobile: null,
-              website: null,
-              gstin: null,
-            },
-          ]);
-          if (error) console.error("❌ Error creating company:", error.message);
-          else console.log("✅ New company profile created");
+        // redirect theo role
+        if (type === "user") {
+          router.push("/user");
+        } else if (type === "company") {
+          router.push("/company");
         }
+      } catch (error) {
+        console.error("Error creating record:", error.message);
       }
-
-      // redirect sang profile
-      router.push("/profile");
     };
 
     createRecordIfNotExists();
