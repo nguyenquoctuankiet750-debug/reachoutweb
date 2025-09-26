@@ -31,7 +31,7 @@ const Home = (props) => {
               disability: null,
               severity: null,
               qualifications: null,
-              role: type, // 👈 gán role
+              role: type, // 👈 lưu role vào cột mới trong profile
             },
           ]);
 
@@ -42,12 +42,8 @@ const Home = (props) => {
           }
         }
 
-        // redirect theo role
-        if (type === "user") {
-          router.push("/user");
-        } else if (type === "company") {
-          router.push("/company");
-        }
+        // redirect chung về profile
+        router.push("/profile");
       } catch (error) {
         console.error("Error creating record:", error.message);
       }
