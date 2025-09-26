@@ -1,116 +1,233 @@
-import { useEffect, useState } from "react";
-import { supabase } from "../../utils/supabaseClient";
+import { useState, useEffect } from 'react';
+import { Auth } from '@supabase/ui';
+import { supabase } from '../../utils/supabaseClient';
+import { useDropzone } from 'react-dropzone';
 
-export default function CompanyProfile({ user }) {
-  const [form, setForm] = useState({
-    name: "",
-    head: "",
-    mobile: "",
-    website: "",
-    gstin: "",
+function CompanyProfile({ user }) {
+  const [edit, setEdit] = useState(false);
+  const [edit2, setEdit2] = useState(false);
+  const [newCompany, setNewCompany] = useState(false);
+  const [companyData, setCompanyData] = useState({
+    name: '',
+    email: user?.email || '',
+    website: '',
+    mobile: '',
+    establishment_date: '',
+    head: '',
+    gstin: '',
+    about: '',
   });
+  const [publicURL, setPublicURL] = useState('');
+  const { getRootProps, getInputProps, isDragActive, acceptedFiles } = useDropzone({});
 
-  const [loading, setLoading] = useState(true);
+  const files = acceptedFiles.map((file) => (
+    <li key={file.path}>
+      {file.path} - {file.size} bytes
+    </li>
+  ));
 
-  // Lấy dữ liệu company từ DB
-  useEffect(() => {
-    const fetchCompany = async () => {
-      if (user) {
-        const { data, error } = await supabase
-          .from("company")
-          .select("*")
-          .eq("id", user.id)
-          .single();
-
-        if (error && error.code !== "PGRST116") {
-          console.error("❌ Error fetching company:", error.message);
-        } else if (data) {
-          setForm({
-            name: data.name || "",
-            head: data.head || "",
-            mobile: data.mobile || "",
-            website: data.website || "",
-            gstin: data.gstin || "",
-          });
-        }
-        setLoading(false);
-      }
-    };
-
-    fetchCompany();
-  }, [user]);
-
-  // Lưu dữ liệu company
-  const handleSave = async () => {
-    setLoading(true);
-
-    const { error } = await supabase.from("company").upsert({
-      id: user.id,
-      ...form,
-    });
+  const fetchCompany = async () => {
+    const { data, error } = await supabase
+      .from('company')
+      .select('*')
+      .eq('id', user.id)
+      .single();
 
     if (error) {
-      alert("❌ Lỗi khi lưu company: " + error.message);
-    } else {
-      alert("✅ Company profile đã được lưu!");
-    }
+      console.log(error);
+      setNewCompany(true);
+      setEdit(true);
+      setEdit2(true);
+    } else if (data) {
+      setCompanyData({
+        name: data.name,
+        email: user.email,
+        website: data.website,
+        mobile: data.mobile,
+        establishment_date: data.establishment_date,
+        head: data.head,
+        gstin: data.gstin,
+        about: data.about,
+      });
 
-    setLoading(false);
+      const { publicURL } = supabase.storage
+        .from('association')
+        .getPublicUrl(`public/${user.id}.pdf`);
+      setPublicURL(publicURL || '');
+    } else {
+      setNewCompany(true);
+      setEdit(true);
+      setEdit2(true);
+    }
   };
 
-  if (loading) return <h1>Loading...</h1>;
+  useEffect(() => {
+    fetchCompany();
+  }, []);
+
+  const submitForm = async () => {
+    if (newCompany) {
+      const { data, error } = await supabase
+        .from('company')
+        .insert([{ id: user.id, ...companyData }]);
+      if (error) console.log(error);
+      else setNewCompany(false);
+    } else {
+      const { data, error } = await supabase
+        .from('company')
+        .update(companyData)
+        .eq('id', user.id);
+      if (error) console.log(error);
+    }
+  };
+
+  const handleEditSave = (e) => {
+    e.preventDefault();
+    if (edit) {
+      submitForm();
+      setEdit(false);
+    } else {
+      setEdit(true);
+    }
+  };
+
+  const handleEditSave2 = (e) => {
+    e.preventDefault();
+    setEdit2(!edit2);
+  };
+
+  const fileSelectedHandler = async (event) => {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const { data, error } = await supabase.storage
+      .from('association')
+      .upload(`public/${user.id}.pdf`, file, { cacheControl: '3600', upsert: true });
+
+    if (error) {
+      console.log(error);
+      return;
+    }
+
+    const { publicURL } = supabase.storage
+      .from('association')
+      .getPublicUrl(`public/${user.id}.pdf`);
+    setPublicURL(publicURL);
+  };
 
   return (
-    <div className="p-6 max-w-lg mx-auto bg-white rounded-xl shadow-md space-y-4">
-      <h2 className="text-2xl font-bold text-gray-800 mb-4">Company Profile</h2>
+    <div className="p-10">
+      {/* PDF Upload Section */}
+      <div className="md:grid md:grid-cols-3 md:gap-6 mb-10">
+        <div className="md:col-span-1">
+          <h1 className="text-3xl font-medium text-gray-900 dark:text-white">
+            Profile
+          </h1>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            This information will be displayed publicly.
+          </p>
+        </div>
+        <div className="md:col-span-2 mt-5 md:mt-0">
+          <form className="shadow sm:rounded-md sm:overflow-hidden">
+            <div className="px-4 py-5 bg-white dark:bg-zinc-800 space-y-6">
+              {!publicURL ? (
+                <div {...getRootProps({ className: 'dropzone' })}>
+                  <label className="block text-sm font-medium text-gray-700 dark:text-white">
+                    Upload Article of Association
+                  </label>
+                  <div className="mt-2 flex justify-center px-6 pt-5 pb-6 border-2 border-gray-300 border-dashed rounded-md">
+                    <div className="space-y-1 text-center">
+                      <input
+                        {...getInputProps()}
+                        onChange={fileSelectedHandler}
+                        disabled={!edit2}
+                      />
+                      <aside className="text-xs text-gray-500">
+                        <ul>{files}</ul>
+                      </aside>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div>
+                  <h2 className="text-sm font-medium text-gray-700 dark:text-white my-4">
+                    Article of Association Uploaded
+                  </h2>
+                  <object width="100%" height="400" data={publicURL} type="application/pdf" />
+                </div>
+              )}
+            </div>
+            <div className="px-4 py-3 bg-gray-50 text-right dark:bg-zinc-800">
+              <button
+                type="submit"
+                className="inline-flex justify-center py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                onClick={handleEditSave2}
+              >
+                {edit2 ? 'Save' : 'Edit'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
 
-      <input
-        type="text"
-        placeholder="Company Name"
-        value={form.name}
-        onChange={(e) => setForm({ ...form, name: e.target.value })}
-        className="w-full border p-2 rounded"
-      />
-
-      <input
-        type="text"
-        placeholder="Head of Company"
-        value={form.head}
-        onChange={(e) => setForm({ ...form, head: e.target.value })}
-        className="w-full border p-2 rounded"
-      />
-
-      <input
-        type="text"
-        placeholder="Mobile"
-        value={form.mobile}
-        onChange={(e) => setForm({ ...form, mobile: e.target.value })}
-        className="w-full border p-2 rounded"
-      />
-
-      <input
-        type="text"
-        placeholder="Website"
-        value={form.website}
-        onChange={(e) => setForm({ ...form, website: e.target.value })}
-        className="w-full border p-2 rounded"
-      />
-
-      <input
-        type="text"
-        placeholder="GSTIN"
-        value={form.gstin}
-        onChange={(e) => setForm({ ...form, gstin: e.target.value })}
-        className="w-full border p-2 rounded"
-      />
-
-      <button
-        onClick={handleSave}
-        disabled={loading}
-        className="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600"
-      >
-        {loading ? "Saving..." : "Save"}
-      </button>
+      {/* Company Info Section */}
+      <div className="md:grid md:grid-cols-3 md:gap-6">
+        <div className="md:col-span-1">
+          <h3 className="text-3xl font-medium text-gray-900 dark:text-white">
+            Company Information
+          </h3>
+          <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
+            Details shown to other users and companies.
+          </p>
+        </div>
+        <div className="md:col-span-2 mt-5 md:mt-0">
+          <form className="shadow sm:rounded-md sm:overflow-hidden p-5 bg-white dark:bg-zinc-800">
+            <div className="grid gap-6 md:grid-cols-2 mb-6">
+              {['name', 'email', 'website', 'mobile', 'establishment_date', 'head', 'gstin'].map((field) => (
+                <div key={field}>
+                  <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">
+                    {field.replace('_', ' ').toUpperCase()}
+                  </label>
+                  <input
+                    type={field === 'email' ? 'email' : field === 'establishment_date' ? 'date' : 'text'}
+                    value={companyData[field]}
+                    onChange={(e) => setCompanyData({ ...companyData, [field]: e.target.value })}
+                    disabled={!edit}
+                    className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5 w-full dark:bg-zinc-700 dark:text-white"
+                  />
+                </div>
+              ))}
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 dark:text-white">About</label>
+              <textarea
+                rows="3"
+                value={companyData.about}
+                onChange={(e) => setCompanyData({ ...companyData, about: e.target.value })}
+                disabled={!edit}
+                className="shadow-sm mt-1 block w-full sm:text-sm border border-gray-300 rounded-md p-2.5"
+              />
+            </div>
+            <div className="px-4 py-3 text-right">
+              <button
+                type="submit"
+                className="inline-flex justify-center py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
+                onClick={handleEditSave}
+              >
+                {edit ? 'Save' : 'Edit'}
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
+  );
+}
+
+export default function CompanyProfileWrapper({ user }) {
+  return (
+    <Auth.UserContextProvider supabaseClient={supabase}>
+      <CompanyProfile user={user} />
+    </Auth.UserContextProvider>
   );
 }
