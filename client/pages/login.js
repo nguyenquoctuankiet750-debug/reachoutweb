@@ -7,20 +7,29 @@ const Home = (props) => {
   const { user } = Auth.useUser();
   const router = useRouter();
   const [type, setType] = useState(null);
+  const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    const createRecordIfNotExists = async () => {
+    const createOrUpdateProfile = async () => {
       if (!user || !type) return;
 
+      setLoading(true);
       try {
-        const { data: existing } = await supabase
+        // check có profile chưa
+        const { data: existing, error: selectError } = await supabase
           .from("profile")
-          .select("id")
+          .select("*")
           .eq("id", user.id)
           .single();
 
+        if (selectError && selectError.code !== "PGRST116") {
+          // PGRST116 = not found
+          throw selectError;
+        }
+
         if (!existing) {
-          const { error } = await supabase.from("profile").insert([
+          // chưa có thì insert
+          const { error: insertError } = await supabase.from("profile").insert([
             {
               id: user.id,
               first_name: user.email.split("@")[0],
@@ -31,25 +40,33 @@ const Home = (props) => {
               disability: null,
               severity: null,
               qualifications: null,
-              role: type, // 👈 lưu role vào cột mới trong profile
+              role: type,
             },
           ]);
 
-          if (error) {
-            console.error("❌ Error creating profile:", error.message);
-          } else {
-            console.log("✅ New profile created with role:", type);
-          }
+          if (insertError) throw insertError;
+          console.log("✅ Profile created");
+        } else {
+          // có rồi thì update role
+          const { error: updateError } = await supabase
+            .from("profile")
+            .update({ role: type })
+            .eq("id", user.id);
+
+          if (updateError) throw updateError;
+          console.log("✅ Profile updated with role:", type);
         }
 
-        // redirect chung về profile
         router.push("/profile");
       } catch (error) {
-        console.error("Error creating record:", error.message);
+        console.error("❌ Error handling profile:", error.message);
+        alert("Đã có lỗi khi tạo/cập nhật profile: " + error.message);
+      } finally {
+        setLoading(false);
       }
     };
 
-    createRecordIfNotExists();
+    createOrUpdateProfile();
   }, [user, type]);
 
   return (
@@ -99,6 +116,8 @@ const Home = (props) => {
           </label>
         </div>
       </div>
+
+      {loading && <p className="mt-4 text-blue-600">Loading...</p>}
 
       <article>{props.children}</article>
     </section>
