@@ -1,23 +1,23 @@
-import { useState, useEffect } from 'react';
-import { Auth } from '@supabase/ui';
-import { supabase } from '../../utils/supabaseClient';
-import { useDropzone } from 'react-dropzone';
+import { useState, useEffect } from "react";
+import { Auth } from "@supabase/ui";
+import { supabase } from "../../utils/supabaseClient";
+import { useDropzone } from "react-dropzone";
 
 function CompanyProfile({ user }) {
   const [edit, setEdit] = useState(false);
   const [edit2, setEdit2] = useState(false);
   const [newCompany, setNewCompany] = useState(false);
   const [companyData, setCompanyData] = useState({
-    name: '',
-    email: user?.email || '',
-    website: '',
-    mobile: '',
-    establishment_date: '',
-    head: '',
-    gstin: '',
-    about: '',
+    name: "",
+    email: user?.email || "",
+    website: "",
+    mobile: "",
+    establishment_date: "",
+    head: "",
+    gstin: "",
+    about: "",
   });
-  const [publicURL, setPublicURL] = useState('');
+  const [publicURL, setPublicURL] = useState("");
   const { getRootProps, getInputProps, acceptedFiles } = useDropzone({});
 
   const files = acceptedFiles.map((file) => (
@@ -29,32 +29,32 @@ function CompanyProfile({ user }) {
   // Lấy dữ liệu từ Supabase
   const fetchCompany = async () => {
     const { data, error } = await supabase
-      .from('company')
-      .select('*')
-      .eq('id', user.id)
-      .single();
+      .from("company")
+      .select("*")
+      .eq("id", user.id)
+      .maybeSingle(); // 👈 tránh lỗi khi nhiều/không có record
 
     if (error) {
-      console.log(error);
+      console.error("Error fetching company:", error);
       setNewCompany(true);
       setEdit(true);
       setEdit2(true);
     } else if (data) {
       setCompanyData({
-        name: data.name,
-        email: data.email,
-        website: data.website,
-        mobile: data.mobile,
-        establishment_date: data.establishment_date,
-        head: data.head,
-        gstin: data.gstin,
-        about: data.about,
+        name: data.name || "",
+        email: data.email || user.email,
+        website: data.website || "",
+        mobile: data.mobile || "",
+        establishment_date: data.establishment_date || "",
+        head: data.head || "",
+        gstin: data.gstin || "",
+        about: data.about || "",
       });
 
       const { publicURL } = supabase.storage
-        .from('association')
+        .from("association")
         .getPublicUrl(`public/${user.id}.pdf`);
-      setPublicURL(publicURL || '');
+      setPublicURL(publicURL || "");
     } else {
       setNewCompany(true);
       setEdit(true);
@@ -63,8 +63,8 @@ function CompanyProfile({ user }) {
   };
 
   useEffect(() => {
-    fetchCompany();
-  }, []);
+    if (user) fetchCompany();
+  }, [user]);
 
   // Gửi dữ liệu lên Supabase
   const submitForm = async () => {
@@ -80,25 +80,28 @@ function CompanyProfile({ user }) {
       about: companyData.about,
     };
 
+    let res;
     if (newCompany) {
-      const { data, error } = await supabase
-        .from('company')
-        .insert([companyPayload]);
-      if (error) console.log(error);
-      else setNewCompany(false);
+      res = await supabase.from("company").insert([companyPayload]);
     } else {
-      const { data, error } = await supabase
-        .from('company')
+      res = await supabase
+        .from("company")
         .update(companyPayload)
-        .eq('id', user.id);
-      if (error) console.log(error);
+        .eq("id", user.id);
+    }
+
+    if (res.error) {
+      console.error("Error saving company:", res.error);
+    } else {
+      setNewCompany(false);
+      console.log("Company saved:", res.data);
     }
   };
 
-  const handleEditSave = (e) => {
+  const handleEditSave = async (e) => {
     e.preventDefault();
     if (edit) {
-      submitForm();
+      await submitForm();
       setEdit(false);
     } else {
       setEdit(true);
@@ -114,17 +117,20 @@ function CompanyProfile({ user }) {
     const file = event.target.files[0];
     if (!file) return;
 
-    const { data, error } = await supabase.storage
-      .from('association')
-      .upload(`public/${user.id}.pdf`, file, { cacheControl: '3600', upsert: true });
+    const { error } = await supabase.storage
+      .from("association")
+      .upload(`public/${user.id}.pdf`, file, {
+        cacheControl: "3600",
+        upsert: true,
+      });
 
     if (error) {
-      console.log(error);
+      console.error("File upload error:", error);
       return;
     }
 
     const { publicURL } = supabase.storage
-      .from('association')
+      .from("association")
       .getPublicUrl(`public/${user.id}.pdf`);
     setPublicURL(publicURL);
   };
@@ -145,7 +151,7 @@ function CompanyProfile({ user }) {
           <form className="shadow sm:rounded-md sm:overflow-hidden">
             <div className="px-4 py-5 bg-white dark:bg-zinc-800 space-y-6">
               {!publicURL ? (
-                <div {...getRootProps({ className: 'dropzone' })}>
+                <div {...getRootProps({ className: "dropzone" })}>
                   <label className="block text-sm font-medium text-gray-700 dark:text-white">
                     Upload Article of Association
                   </label>
@@ -167,7 +173,12 @@ function CompanyProfile({ user }) {
                   <h2 className="text-sm font-medium text-gray-700 dark:text-white my-4">
                     Article of Association Uploaded
                   </h2>
-                  <object width="100%" height="400" data={publicURL} type="application/pdf" />
+                  <object
+                    width="100%"
+                    height="400"
+                    data={publicURL}
+                    type="application/pdf"
+                  />
                 </div>
               )}
             </div>
@@ -177,7 +188,7 @@ function CompanyProfile({ user }) {
                 className="inline-flex justify-center py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
                 onClick={handleEditSave2}
               >
-                {edit2 ? 'Save' : 'Edit'}
+                {edit2 ? "Save" : "Edit"}
               </button>
             </div>
           </form>
@@ -197,15 +208,31 @@ function CompanyProfile({ user }) {
         <div className="md:col-span-2 mt-5 md:mt-0">
           <form className="shadow sm:rounded-md sm:overflow-hidden p-5 bg-white dark:bg-zinc-800">
             <div className="grid gap-6 md:grid-cols-2 mb-6">
-              {['name', 'email', 'website', 'mobile', 'establishment_date', 'head', 'gstin'].map((field) => (
+              {[
+                "name",
+                "email",
+                "website",
+                "mobile",
+                "establishment_date",
+                "head",
+                "gstin",
+              ].map((field) => (
                 <div key={field}>
                   <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">
-                    {field.replace('_', ' ').toUpperCase()}
+                    {field.replace("_", " ").toUpperCase()}
                   </label>
                   <input
-                    type={field === 'email' ? 'email' : field === 'establishment_date' ? 'date' : 'text'}
+                    type={
+                      field === "email"
+                        ? "email"
+                        : field === "establishment_date"
+                        ? "date"
+                        : "text"
+                    }
                     value={companyData[field]}
-                    onChange={(e) => setCompanyData({ ...companyData, [field]: e.target.value })}
+                    onChange={(e) =>
+                      setCompanyData({ ...companyData, [field]: e.target.value })
+                    }
                     disabled={!edit}
                     className="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg p-2.5 w-full dark:bg-zinc-700 dark:text-white"
                   />
@@ -213,11 +240,15 @@ function CompanyProfile({ user }) {
               ))}
             </div>
             <div>
-              <label className="block text-sm font-medium text-gray-700 dark:text-white">About</label>
+              <label className="block text-sm font-medium text-gray-700 dark:text-white">
+                About
+              </label>
               <textarea
                 rows="3"
                 value={companyData.about}
-                onChange={(e) => setCompanyData({ ...companyData, about: e.target.value })}
+                onChange={(e) =>
+                  setCompanyData({ ...companyData, about: e.target.value })
+                }
                 disabled={!edit}
                 className="shadow-sm mt-1 block w-full sm:text-sm border border-gray-300 rounded-md p-2.5"
               />
@@ -228,7 +259,7 @@ function CompanyProfile({ user }) {
                 className="inline-flex justify-center py-2 px-4 bg-indigo-600 text-white rounded-md hover:bg-indigo-700"
                 onClick={handleEditSave}
               >
-                {edit ? 'Save' : 'Edit'}
+                {edit ? "Save" : "Edit"}
               </button>
             </div>
           </form>
