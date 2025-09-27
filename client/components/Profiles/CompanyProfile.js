@@ -14,7 +14,7 @@ function CompanyProfile({ user }) {
     mobile: "",
     establishment_date: "",
     head: "",
-    gstin: "",
+    tax_id: "", // ✅ đổi từ gstin
     about: "",
   });
   const [publicURL, setPublicURL] = useState("");
@@ -47,7 +47,7 @@ function CompanyProfile({ user }) {
         mobile: data.mobile || "",
         establishment_date: data.establishment_date || "",
         head: data.head || "",
-        gstin: data.gstin || "",
+        tax_id: data.tax_id || "", // ✅ đổi từ gstin
         about: data.about || "",
       });
 
@@ -76,7 +76,7 @@ function CompanyProfile({ user }) {
       mobile: companyData.mobile,
       establishment_date: companyData.establishment_date,
       head: companyData.head,
-      gstin: companyData.gstin,
+      tax_id: companyData.tax_id, // ✅ đổi từ gstin
       about: companyData.about,
     };
 
@@ -215,7 +215,7 @@ function CompanyProfile({ user }) {
                 "mobile",
                 "establishment_date",
                 "head",
-                "gstin",
+                "tax_id", // ✅ đổi từ gstin
               ].map((field) => (
                 <div key={field}>
                   <label className="block mb-2 text-sm font-medium text-gray-900 dark:text-gray-300">
