@@ -18,7 +18,7 @@ function CompanyProfile({ user }) {
     about: '',
   });
   const [publicURL, setPublicURL] = useState('');
-  const { getRootProps, getInputProps, isDragActive, acceptedFiles } = useDropzone({});
+  const { getRootProps, getInputProps, acceptedFiles } = useDropzone({});
 
   const files = acceptedFiles.map((file) => (
     <li key={file.path}>
@@ -26,6 +26,7 @@ function CompanyProfile({ user }) {
     </li>
   ));
 
+  // Lấy dữ liệu từ Supabase
   const fetchCompany = async () => {
     const { data, error } = await supabase
       .from('company')
@@ -41,7 +42,7 @@ function CompanyProfile({ user }) {
     } else if (data) {
       setCompanyData({
         name: data.name,
-        email: user.email,
+        email: data.email,
         website: data.website,
         mobile: data.mobile,
         establishment_date: data.establishment_date,
@@ -65,17 +66,30 @@ function CompanyProfile({ user }) {
     fetchCompany();
   }, []);
 
+  // Gửi dữ liệu lên Supabase
   const submitForm = async () => {
+    const companyPayload = {
+      id: user.id,
+      name: companyData.name,
+      email: companyData.email,
+      website: companyData.website,
+      mobile: companyData.mobile,
+      establishment_date: companyData.establishment_date,
+      head: companyData.head,
+      gstin: companyData.gstin,
+      about: companyData.about,
+    };
+
     if (newCompany) {
       const { data, error } = await supabase
         .from('company')
-        .insert([{ id: user.id, ...companyData }]);
+        .insert([companyPayload]);
       if (error) console.log(error);
       else setNewCompany(false);
     } else {
       const { data, error } = await supabase
         .from('company')
-        .update(companyData)
+        .update(companyPayload)
         .eq('id', user.id);
       if (error) console.log(error);
     }
